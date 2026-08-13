@@ -1,4 +1,4 @@
-const CACHE = 'grand-livre-v1';
+const CACHE = 'grand-livre-v2';
 const FILES = [
   './',
   './index.html',

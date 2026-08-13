@@ -554,28 +554,56 @@ function renderCategories(){
 
 function renderBackup(){
   return `<h1 class="page-title">Sauvegarde</h1><p class="page-sub">Vos données restent sur cet appareil. Faites régulièrement une sauvegarde pour pouvoir les restaurer en cas de changement de navigateur ou d'ordinateur.</p>
-  <div class="grid cols-2"><div class="card"><h3>Sauvegarde complète</h3><p class="muted">Comptes, opérations, charges fixes, catégories et réglages.</p><div class="backup-actions"><button class="btn primary" data-action="backup-json">Télécharger la sauvegarde</button><button class="btn ghost" data-action="restore-json">Restaurer une sauvegarde</button></div></div><div class="card"><h3>Export des opérations</h3><p class="muted">Fichier CSV lisible dans Excel.</p><div class="backup-actions"><button class="btn primary" data-action="export-csv">Exporter en CSV</button></div></div></div>
+  <div class="grid cols-2"><div class="card"><h3>Sauvegarde complète</h3><p class="muted">Comptes, opérations, charges fixes, catégories et réglages. Sur iPhone/iPad, choisissez ensuite « Enregistrer dans Fichiers » dans la feuille de partage.</p><div class="backup-actions"><button class="btn primary" data-action="backup-json">Télécharger la sauvegarde</button><button class="btn ghost" data-action="restore-json">Restaurer une sauvegarde</button></div></div><div class="card"><h3>Export des opérations</h3><p class="muted">Fichier CSV lisible dans Excel.</p><div class="backup-actions"><button class="btn primary" data-action="export-csv">Exporter en CSV</button></div></div></div>
   <div class="rule"></div><div class="card"><h3>Automatisation générale</h3><p class="muted">Vous pouvez suspendre temporairement toutes les écritures automatiques sans modifier chaque charge.</p><div class="backup-actions"><button class="btn ${state.settings.autoFixed?'ghost':'primary'}" data-action="toggle-global-auto">${state.settings.autoFixed?'Suspendre les automatismes':'Réactiver les automatismes'}</button></div><p class="muted" style="margin-top:10px;">État : <strong>${state.settings.autoFixed?'ACTIF':'SUSPENDU'}</strong></p></div>`;
 }
 
-function downloadText(filename,text,mime='text/plain'){
+async function downloadText(filename,text,mime='text/plain'){
+  // Version Mac native : utilise le pont Swift si présent.
   if(window.webkit?.messageHandlers?.grandLivreSave){
-    window.webkit.messageHandlers.grandLivreSave.postMessage({filename,text}); return;
+    window.webkit.messageHandlers.grandLivreSave.postMessage({filename,text});
+    return true;
   }
-  const blob=new Blob([text],{type:mime}), url=URL.createObjectURL(blob), a=document.createElement('a');
-  a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+
+  try{
+    const file = new File([text], filename, {type:mime});
+
+    // iPhone/iPad Web App : ouvre la feuille de partage iOS.
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+      await navigator.share({
+        files:[file],
+        title:filename
+      });
+      return true;
+    }
+  }catch(err){
+    // Annulation du partage ou API indisponible : on passe au téléchargement classique.
+  }
+
+  // Fallback Safari / autres navigateurs.
+  const blob = new Blob([text], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  return true;
 }
-function backupJSON(){
+async function backupJSON(){
   persistNow(false);
   const payload={app:'Grand-Livre',version:DATA_VERSION,exportedAt:new Date().toISOString(),data:state};
-  downloadText(`grand-livre-sauvegarde-${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json');
-  toast('Sauvegarde créée');
+  await downloadText(`grand-livre-sauvegarde-${todayISO()}.json`,JSON.stringify(payload,null,2),'application/json');
+  toast('Sauvegarde prête à enregistrer');
 }
-function exportCSV(){
+async function exportCSV(){
   const rows=[['Date','Compte','Devise','Sens','Catégorie','Mode','Libellé','Montant','Automatique','Validée banque','Date validation banque','ID transfert','Rôle transfert']];
   [...state.transactions].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const a=accountById(t.accountId),c=categoryById(t.categoryId);rows.push([t.date,a?.name||'',a?.currency||'',t.sens,c?.name||'',t.mode||'',t.libelle||'',Number(t.montant)||0,t.automatique?'OUI':'NON',t.bankValidated?'OUI':'NON',t.bankValidatedDate||'',t.transferId||'',t.transferRole||'']);});
   const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
-  downloadText(`grand-livre-operations-${todayISO()}.csv`,csv,'text/csv;charset=utf-8'); toast('Export CSV créé');
+  await downloadText(`grand-livre-operations-${todayISO()}.csv`,csv,'text/csv;charset=utf-8');
+  toast('Export CSV prêt à enregistrer');
 }
 
 // Un seul gestionnaire de submit pour toute la durée de vie de l'application.
