@@ -178,7 +178,7 @@
 .alert-banner{padding:12px 14px;background:var(--debit-bg);border:1px solid #cba8a2;border-radius:3px;font-size:13px;color:var(--debit);margin-bottom:18px;font-weight:600}
 
 nav.tabs button.theme-toggle{margin-top:auto;color:var(--ink-soft);font-size:12px}
-@media(max-width:760px){.theme-toggle{display:none}}
+
 
 @media print{
   nav.tabs, .profile-mobile, .toast, #profile-modal-root, form.inline, .backup-actions{display:none !important}
@@ -545,6 +545,47 @@ button,input,select,textarea{touch-action:manipulation;}
   input,select,textarea{font-size:16px !important;}
 }
 
+</style>
+
+
+<style id="grandlivre-mobile-dark-toggle-v115">
+@media(max-width:760px){
+  nav.tabs button.theme-toggle{
+    display:flex!important;
+    position:fixed!important;
+    z-index:950!important;
+    top:calc(10px + env(safe-area-inset-top))!important;
+    right:10px!important;
+    bottom:auto!important;
+    left:auto!important;
+    width:auto!important;
+    min-width:42px!important;
+    min-height:40px!important;
+    margin:0!important;
+    padding:7px 10px!important;
+    border-radius:12px!important;
+    align-items:center!important;
+    justify-content:center!important;
+    background:color-mix(in srgb,var(--card-solid) 92%,transparent)!important;
+    color:var(--ink)!important;
+    border:1px solid var(--paper-line)!important;
+    box-shadow:0 6px 16px rgba(40,34,25,.08)!important;
+    backdrop-filter:blur(16px)!important;
+    -webkit-backdrop-filter:blur(16px)!important;
+  }
+  nav.tabs button.theme-toggle .label{
+    font-size:0!important;
+    line-height:1!important;
+  }
+  nav.tabs button.theme-toggle .label::before{
+    content:"☾";
+    font-size:20px!important;
+    line-height:1!important;
+  }
+  body[data-theme="dark"] nav.tabs button.theme-toggle .label::before{
+    content:"☀";
+  }
+}
 </style>
 
 </head>
